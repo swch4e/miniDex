@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MiniDEX 실습</title>
+<meta name="description" content="탈중앙화금융 수업용 MiniDEX — Sepolia 테스트넷 전용">
+<style>
+  :root{
+    --ink:#1F2A44; --ink2:#3B4A70; --amber:#E9A23B; --teal:#1F8A7A; --red:#C8423F; --purple:#6B5B95;
+    --bg:#F4F6FA; --card:#FFFFFF; --line:#DDE2EB; --muted:#5B6475; --soft:#EEF1F6; --tealsoft:#E6F4F1; --redsoft:#FBE9E8; --ambersoft:#FFF4E0;
+    --text:#1B2233;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#11151F; --card:#1A2030; --line:#2C3448; --muted:#9AA3B6; --soft:#222A3C; --tealsoft:#163530; --redsoft:#3A1F22; --ambersoft:#3A2E16; --text:#E7EAF1; --ink:#C9D3EA;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif}
+  a{color:#2B5DB8}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em}
+  header{background:#1F2A44;color:#fff;padding:14px 16px}
+  .hwrap{max-width:1080px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+  .brand{font-weight:800;font-size:18px;letter-spacing:-.2px}
+  .brand small{display:block;font-weight:500;font-size:12px;color:#CAD3E6}
+  .wallet{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .pill{padding:5px 10px;border-radius:999px;background:#2D3A5C;font-size:13px;white-space:nowrap}
+  .pill.ok{background:var(--teal)} .pill.bad{background:var(--red)}
+  button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:9px 14px;font-weight:700;background:var(--ink2);color:#fff}
+  button.primary{background:var(--amber);color:#1F2A44}
+  button.teal{background:var(--teal)} button.red{background:var(--red)} button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  main{max-width:1080px;margin:0 auto;padding:16px}
+  nav.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px}
+  nav.tabs button{background:var(--card);color:var(--text);border:1px solid var(--line);white-space:nowrap;font-weight:600}
+  nav.tabs button.on{background:#1F2A44;color:#fff;border-color:#1F2A44}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h3{margin:0 0 4px;font-size:16px}
+  .card .sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--muted);margin-left:6px;vertical-align:middle}
+  .tag.book{background:#1F2A44;color:#fff}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input,select{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
+  .row{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+  .row > *{flex:1;min-width:120px}
+  .row > button{flex:0 0 auto}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:8px 0}
+  .kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;word-break:break-all}
+  .big{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .note{background:var(--soft);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--muted);margin-top:10px;overflow-wrap:anywhere}
+  .note.teal{background:var(--tealsoft)} .note.red{background:var(--redsoft)} .note.amber{background:var(--ambersoft)}
+  .formula{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:var(--tealsoft);border-radius:8px;padding:10px;margin-top:10px;white-space:pre-wrap;color:var(--text)}
+  .steps{list-style:none;padding:0;margin:0}
+  .steps li{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .steps li:last-child{border:0}
+  .dot{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:var(--soft);color:var(--muted);flex:0 0 22px}
+  .dot.ok{background:var(--teal);color:#fff}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:12.5px}
+  .tablewrap{overflow-x:auto}
+  .risk-hi{color:var(--red);font-weight:700} .risk-mid{color:#B7791F;font-weight:700} .risk-lo{color:var(--teal);font-weight:700}
+  #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);max-width:min(560px,calc(100% - 32px));background:#1F2A44;color:#fff;padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:none;z-index:9}
+  #toast.err{background:var(--red)} #toast.ok{background:var(--teal)}
+  .banner{background:var(--ambersoft);border:1px solid var(--amber);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:14px}
+  .banner.red{background:var(--redsoft);border-color:var(--red)}
+  .hidden{display:none !important}
+  .log li{padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;list-style:none}
+  .log{padding:0;margin:0}
+  .muted{color:var(--muted)}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:560px){ .split{grid-template-columns:1fr} .big{font-size:22px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <div class="brand">MiniDEX 실습 <small>탈중앙화금융 제5장 · Sepolia 테스트넷 전용</small></div>
+    <div class="wallet">
+      <span id="netPill" class="pill">지갑 미연결</span>
+      <span id="acctPill" class="pill hidden"></span>
+      <span id="ethPill" class="pill hidden"></span>
+      <span id="usdPill" class="pill hidden"></span>
+      <button id="btnConnect" class="primary">MetaMask 연결</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="cfgBanner" class="banner red hidden"></div>
+  <div class="banner">⚠ 수업용 테스트넷 지갑만 사용하세요. 이 페이지는 Sepolia 테스트넷의 MiniDEX 컨트랙트에만 연결됩니다. 실제 자산이 든 지갑으로 서명하지 마세요.</div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="ready" class="on">① 준비</button>
+    <button data-tab="list">② 내 토큰 상장</button>
+    <button data-tab="trade">③ 거래</button>
+    <button data-tab="lp">④ 내 유동성</button>
+    <button data-tab="board">⑤ 반 전체 풀</button>
+    <button data-tab="log">⑥ 내 기록</button>
+  </nav>
+
+  <!-- ① 준비 -->
+  <section data-panel="ready">
+    <div class="grid">
+      <div class="card">
+        <h3>준비 체크리스트</h3>
+        <p class="sub">모두 초록색이 되면 실습을 시작할 수 있습니다.</p>
+        <ul class="steps">
+          <li><span class="dot" id="ck1">1</span> MetaMask 지갑 연결</li>
+          <li><span class="dot" id="ck2">2</span> 네트워크: Sepolia <button id="btnSwitch" class="ghost hidden" style="margin-left:auto;padding:5px 10px">Sepolia로 전환</button></li>
+          <li><span class="dot" id="ck3">3</span> 가스용 Sepolia ETH 0.01 이상 <span id="ck3v" class="muted" style="margin-left:auto"></span></li>
+          <li><span class="dot" id="ck4">4</span> 수업용 기준통화 HSUSD 받기 <button id="btnClaim" class="teal" style="margin-left:auto;padding:5px 12px" disabled>10,000 HSUSD 받기</button></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>이 페이지가 하는 일</h3>
+        <p class="sub">교재 80쪽의 IDO 실습을 위한 준비를 합니다. 모든 거래는 내 MetaMask에서 직접 서명합니다.</p>
+        <dl class="kv">
+          <dt>HSUSD 컨트랙트</dt><dd><a id="lnkUsd" class="mono" target="_blank" rel="noopener"></a></dd>
+          <dt>MiniDEX 컨트랙트</dt><dd><a id="lnkDex" class="mono" target="_blank" rel="noopener"></a></dd>
+          <dt>반 전체 풀 수</dt><dd id="poolCount">—</dd>
+        </dl>
+        <div class="note">토큰을 쓰는 거래(유동성 공급·매수·매도) 전에는 <b>승인(approve)</b> 서명이 먼저 뜹니다. 이 페이지는 무제한 승인 대신 <b>이번 거래에 필요한 만큼만</b> 승인합니다. 4장에서 배운 승인 피싱 위험을 줄이는 습관입니다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ② 내 토큰 상장 -->
+  <section data-panel="list" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h3>내 토큰 <span class="tag book">교재 p.80 IDO</span></h3>
+        <p class="sub">지난 실습에서 만든 여러분들 각자의 ERC-20 토큰의 컨트랙트 주소를 넣으세요.</p>
+        <div class="row">
+          <input id="myToken" placeholder="0x로 시작하는 내 토큰 주소" class="mono">
+          <button id="btnLoadToken">불러오기</button>
+        </div>
+        <dl class="kv" id="tokInfo"></dl>
+        <div id="poolState" class="note hidden"></div>
+        <button id="btnCreatePool" class="primary hidden" style="margin-top:10px;width:100%">풀 만들기 (createPool)</button>
+      </div>
+      <div class="card" id="cardAdd">
+        <h3>유동성 공급 = 시작 가격 정하기</h3>
+        <p class="sub" id="addSub">첫 공급자는 두 수량의 비율로 시작 가격을 정합니다. 교재 예시와 같은 10 : 1 비율을 권장합니다.</p>
+        <div class="split">
+          <div><label>내 토큰 (개, 정수)</label><input id="addTok" type="number" min="1" step="1" value="10000"></div>
+          <div><label>HSUSD (개, 정수) <span id="addUsdHint" class="muted"></span></label><input id="addUsd" type="number" min="1" step="1" value="1000"></div>
+        </div>
+        <div class="note teal" id="addPreview">시작 가격 = HSUSD ÷ 토큰</div>
+        <button id="btnAdd" class="teal" style="margin-top:10px;width:100%" disabled>유동성 공급 (addLiquidity)</button>
+      </div>
+      <div class="card">
+        <h3>내 풀 현황과 위험 보고서</h3>
+        <p class="sub">교재 p.80 '인위적 가격 하한'이 성립하려면 무엇이 필요한지 숫자로 확인합니다.</p>
+        <dl class="kv" id="myPoolInfo"><dt>풀</dt><dd>—</dd></dl>
+        <div class="note amber">위험 보고서의 '풀 밖 물량'은 발행자가 언제든 풀에 팔 수 있는 토큰입니다(실습 3 라운드 2). 'LP 잠금'이 0이면 발행자가 유동성을 바로 뺄 수 있습니다(라운드 3).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ 거래 -->
+  <section data-panel="trade" class="hidden">
+    <div class="card" style="margin-bottom:14px">
+      <div class="row">
+        <div><label>거래할 풀 선택</label><select id="tradePool"><option value="">— 반 전체 풀 불러오는 중 —</option></select></div>
+        <button id="btnRefreshTrade" class="ghost">새로고침</button>
+      </div>
+      <dl class="kv" id="tradeInfo"></dl>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h3>사기 (buy) <span class="tag book"> </span></h3>
+        <p class="sub">HSUSD를 넣고 토큰을 받습니다. 먼저 손으로 계산한 뒤 미리보기와 비교해 보세요.</p>
+        <label>넣을 HSUSD (개, 정수)</label>
+        <input id="buyAmt" type="number" min="1" step="1" value="100">
+        <dl class="kv" id="buyPrev"></dl>
+        <div class="formula" id="buyFormula"></div>
+        <label>슬리피지 보호 (최소 수령량)</label>
+        <select id="buySlip"><option value="-1">보호 없음 (min = 0)</option><option value="0.01">1% 아래까지만 허용</option><option value="0.05">5% 아래까지만 허용</option></select>
+        <button id="btnBuy" class="primary" style="margin-top:10px;width:100%" disabled>사기</button>
+      </div>
+      <div class="card">
+        <h3>팔기 (sell)</h3>
+        <p class="sub">토큰을 넣고 HSUSD를 받습니다.</p>
+        <label>팔 토큰 (개, 정수) <span id="sellBal" class="muted"></span></label>
+        <input id="sellAmt" type="number" min="1" step="1" value="100">
+        <dl class="kv" id="sellPrev"></dl>
+        <div class="row" style="margin-top:10px">
+          <button id="btnSell" class="red" disabled>팔기</button>
+          <button id="btnSellAll" class="ghost" disabled>보유 전부 팔기 (sellAll)</button>
+        </div>
+        <div class="note red">풀에 유동성이 없으면(러그풀 이후) 팔기는 실패합니다. 실패 메시지를 실습지에 기록하세요.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ 내 유동성 -->
+  <section data-panel="lp" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h3>내 LP 지분</h3>
+        <p class="sub">내가 유동성을 공급한 풀만 보입니다.</p>
+        <select id="lpPool"><option value="">— 없음 —</option></select>
+        <dl class="kv" id="lpInfo"></dl>
+      </div>
+      <div class="card">
+        <h3>유동성 회수 (removeLiquidity)</h3>
+        <p class="sub">실습 3 라운드 3 — 발행자가 유동성을 빼면 투자자는 팔 곳이 사라집니다.</p>
+        <label>회수할 비율: <b id="remPctV">100</b>%</label>
+        <input id="remPct" type="range" min="1" max="100" value="100">
+        <button id="btnRemove" class="red" style="margin-top:10px;width:100%" disabled>유동성 회수</button>
+      </div>
+      <div class="card">
+        <h3>유동성 잠금 (lockLiquidity) <span class="tag book"> </span></h3>
+        <p class="sub">실습 3 라운드 4 — 자산을 컨트랙트에 묶어 약속을 코드로 만듭니다. 잠금은 연장만 가능합니다.</p>
+        <label>잠글 시간 (분, 지금부터)</label>
+        <input id="lockMin" type="number" min="1" step="1" value="30">
+        <button id="btnLock" class="teal" style="margin-top:10px;width:100%" disabled>잠그기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑤ 반 전체 풀 -->
+  <section data-panel="board" class="hidden">
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <div><h3>반 전체 풀 현황 <span class="tag book"> </span></h3><p class="sub" style="margin:0">지갑 없이도 볼 수 있습니다. 위험도는 발행자 혼자 할 수 있는 일을 기준으로 단순화한 수업용 지표입니다.</p></div>
+        <button id="btnBoard" class="ghost">새로고침</button>
+      </div>
+      <div class="tablewrap" style="margin-top:10px">
+        <table>
+          <thead><tr><th>#</th><th>토큰</th><th>가격(HSUSD)</th><th>풀 HSUSD</th><th>발행자 LP</th><th>LP 잠금</th><th>발행자 풀 밖 물량</th><th>위험도</th></tr></thead>
+          <tbody id="boardBody"><tr><td colspan="8" class="muted">불러오는 중…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="note">위험도 기준 — <span class="risk-hi">상</span>: 발행자 LP 70% 이상이고 잠금 없음(혼자 러그풀 가능), <span class="risk-mid">중</span>: 잠금은 있으나 풀 밖 물량 50% 이상(덤프 가능), <span class="risk-lo">하</span>: 그 밖. 70%는 강의 슬라이드 17의 Chainalysis 기준에서 따왔습니다.</div>
+    </div>
+  </section>
+
+  <!-- ⑥ 내 기록 -->
+  <section data-panel="log" class="hidden">
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <div><h3>내 거래 기록</h3><p class="sub" style="margin:0">이 브라우저에서 보낸 거래만 저장됩니다. 실습지 제출용으로 복사하세요.</p></div>
+        <button id="btnCopyLog" class="ghost">전체 복사</button>
+      </div>
+      <ul class="log" id="logList"></ul>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script src="./ethers-6.17.0.umd.min.js"></script>
+<script>
+/* =====================================================================
+   설정 — 교수자가 배포한 주소를 여기에 넣으세요.
+   (또는 접속 주소 뒤에 ?hsusd=0x...&dex=0x... 를 붙여도 됩니다)
+   ===================================================================== */
+const CONFIG = {
+  HSUSD: "0x608d1A69D391788D31146fD85546dFFADf674B9A",
+  DEX:   "0x5C7C49EC2f463Dc3A2A3ebDE81dc8EAee7662cc6",
+  CHAIN_ID: 11155111,                                      // Sepolia
+  READ_RPC: "https://ethereum-sepolia-rpc.publicnode.com",  // 지갑 없이 읽기용
+  EXPLORER: "https://sepolia.etherscan.io",
+};
+(function applyUrlOverrides(){
+  const q = new URLSearchParams(location.search);
+  if (q.get("hsusd")) CONFIG.HSUSD = q.get("hsusd");
+  if (q.get("dex")) CONFIG.DEX = q.get("dex");
+  if (q.get("rpc")) CONFIG.READ_RPC = q.get("rpc");
+  if (q.get("chain")) CONFIG.CHAIN_ID = Number(q.get("chain"));
+  if (q.get("explorer")) CONFIG.EXPLORER = q.get("explorer");
+})();
+
+const { ethers } = window;
+const ERR = [
+  "error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed)",
+  "error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed)",
+  "error SafeERC20FailedOperation(address token)",
+];
+const ERC20_ABI = [
+  "function name() view returns (string)", "function symbol() view returns (string)", "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)", "function balanceOf(address) view returns (uint256)",
+  "function allowance(address,address) view returns (uint256)", "function approve(address,uint256) returns (bool)", ...ERR,
+];
+const HSUSD_ABI = [...ERC20_ABI, "function claim()", "function claimed(address) view returns (bool)"];
+const DEX_ABI = [
+  "function createPool(address token) returns (address)", "function poolOf(address) view returns (address)",
+  "function listPools() view returns (address[])", "function poolCount() view returns (uint256)", "function usd() view returns (address)",
+];
+const POOL_ABI = [
+  "function token() view returns (address)", "function creator() view returns (address)",
+  "function tDec() view returns (uint8)", "function uDec() view returns (uint8)",
+  "function reserveToken() view returns (uint256)", "function reserveUsd() view returns (uint256)",
+  "function totalShares() view returns (uint256)", "function shares(address) view returns (uint256)", "function lockedUntil(address) view returns (uint256)",
+  "function addLiquidity(uint256 tokenWhole, uint256 usdMaxWhole)", "function removeLiquidity(uint256 percent)", "function lockLiquidity(uint256 minutes_)",
+  "function buy(uint256 usdWhole, uint256 minTokenWhole)", "function sell(uint256 tokenWhole, uint256 minUsdWhole)", "function sellAll(uint256 minUsdWhole)",
+  "function previewBuy(uint256) view returns (string,string,string,string)", "function previewSell(uint256) view returns (string,string,string,string)",
+  "function info() view returns (string,string,string,string)", "function riskReport() view returns (string,uint256,string,string)",
+  ...ERR,
+];
+
+/* ---------- 상태 ---------- */
+const S = { wallet: null, browser: null, signer: null, account: null, chainOk: false, read: null, pools: [], poolMeta: {}, myTokenMeta: null };
+const $ = (id) => document.getElementById(id);
+const short = (a) => a ? a.slice(0, 6) + "…" + a.slice(-4) : "";
+const fmt = (v, dec, d = 4) => { const s = ethers.formatUnits(v, dec); const [w, f = ""] = s.split("."); return Number(w).toLocaleString("en-US") + (d ? "." + (f + "0".repeat(d)).slice(0, d) : ""); };
+const num = (x, d = 4) => Number(x).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const isAddr = (a) => { try { return ethers.isAddress(a); } catch { return false; } };
+const exAddr = (a) => `${CONFIG.EXPLORER}/address/${a}`;
+const exTx = (h) => `${CONFIG.EXPLORER}/tx/${h}`;
+
+function toast(msg, kind = "") {
+  const t = $("toast"); t.textContent = msg; t.className = kind; t.style.display = "block";
+  clearTimeout(toast._t); toast._t = setTimeout(() => (t.style.display = "none"), kind === "err" ? 9000 : 5000);
+}
+
+/* ---------- 오류 메시지 한글화 (학생 가이드 부록과 같은 내용) ---------- */
+const HINTS = [
+  ["ACTION_REJECTED", "MetaMask에서 서명을 취소했습니다."],
+  ["user rejected", "MetaMask에서 서명을 취소했습니다."],
+  ["ERC20InsufficientAllowance", "승인(approve)이 부족합니다. 다시 시도하면 승인 서명부터 뜹니다."],
+  ["ERC20InsufficientBalance", "잔고가 부족합니다. 토큰 또는 HSUSD 잔고를 확인하세요."],
+  ["already claimed", "이미 HSUSD를 받았습니다."],
+  ["pool already exists", "이 토큰의 풀이 이미 있습니다. 아래 기존 풀을 쓰세요."],
+  ["need more HSUSD", "현재 가격 비율에 맞추려면 HSUSD를 더 넣어야 합니다."],
+  ["no liquidity", "풀에 유동성이 없습니다. (러그풀 이후라면 정상 — 실습지에 기록)"],
+  ["liquidity is locked", "LP가 잠겨 있어 회수할 수 없습니다. (라운드 4라면 정상 — 실습지에 기록)"],
+  ["can only extend", "잠금은 연장만 가능하고 줄일 수 없습니다."],
+  ["slippage", "가격이 움직여 최소 수령량보다 적게 받게 되어 거래가 취소되었습니다(슬리피지 보호)."],
+  ["no shares", "이 풀에 내 LP 지분이 없습니다."],
+  ["insufficient funds", "가스비용 Sepolia ETH가 부족합니다."],
+];
+function explain(e) {
+  let raw = e?.revert?.name || e?.reason || e?.shortMessage || e?.info?.error?.message || e?.message || String(e);
+  if (e?.code === "ACTION_REJECTED" || e?.code === 4001) raw = "ACTION_REJECTED";
+  let all = raw; try { all += " " + (e?.message || "") + " " + JSON.stringify(e?.info || e?.error || {}); } catch {}
+  const hit = HINTS.find(([k]) => all.includes(k));
+  const m = all.match(/(Pool|HSUSD|MiniDEX): [A-Za-z0-9 ~\-]+/);
+  if (m) raw = m[0].trim(); else if (e?.revert?.name) raw = e.revert.name;
+  return { raw, hint: hit ? hit[1] : null };
+}
+const GENERIC = "거래가 실패했습니다. 아래 원문 메시지를 확인하세요.";
+/** 지갑이 실패 이유를 알려 주지 않을 때: 읽기 전용 RPC로 같은 호출을 시뮬레이션해 이유를 찾는다 */
+async function simulateReason(sim) {
+  if (!sim) return null;
+  try {
+    const rpc = new ethers.JsonRpcProvider(CONFIG.READ_RPC, CONFIG.CHAIN_ID, { staticNetwork: true });
+    const c = new ethers.Contract(sim.to, sim.abi, rpc);
+    await c[sim.method].staticCall(...sim.args, { from: S.account });
+    return null;
+  } catch (e2) { return explain(e2); }
+}
+
+/* ---------- 거래 기록 ---------- */
+const LOGKEY = () => "minidex-log-" + (S.account || "none").toLowerCase();
+function readLog() { try { return JSON.parse(localStorage.getItem(LOGKEY()) || "[]"); } catch { return []; } }
+function pushLog(item) { const l = readLog(); l.unshift(item); try { localStorage.setItem(LOGKEY(), JSON.stringify(l.slice(0, 200))); } catch {} renderLog(); }
+function renderLog() {
+  const l = readLog(); const ul = $("logList");
+  ul.innerHTML = l.length ? "" : '<li class="muted">아직 기록이 없습니다.</li>';
+  l.forEach(x => {
+    const li = document.createElement("li");
+    li.innerHTML = `<b>${x.action}</b> <span class="muted">${x.time}</span> — ${x.ok ? '<span class="risk-lo">성공</span>' : '<span class="risk-hi">실패</span>'}<br>` +
+      `<span class="muted">${x.detail || ""}</span>` + (x.hash ? `<br><a class="mono" target="_blank" rel="noopener" href="${exTx(x.hash)}">${x.hash}</a>` : "") + (x.err ? `<br><span class="risk-hi">${x.err}</span>` : "");
+    ul.appendChild(li);
+  });
+}
+
+/* ---------- 거래 보내기 공통 ---------- */
+async function send(action, detail, fn, sim) {
+  if (!S.signer) { toast("먼저 MetaMask를 연결하세요.", "err"); return null; }
+  if (!S.chainOk) { toast("네트워크를 Sepolia로 바꾸세요.", "err"); return null; }
+  const time = new Date().toLocaleTimeString("ko-KR");
+  try {
+    toast(`${action}: MetaMask에서 서명하세요…`);
+    const tx = await fn();
+    toast(`${action}: 블록에 담기는 중… (${short(tx.hash)})`);
+    const rc = await tx.wait();
+    pushLog({ action, detail, hash: tx.hash, ok: rc.status === 1, time });
+    toast(`${action} 완료`, "ok");
+    await refreshAll();
+    return rc;
+  } catch (e) {
+    let { raw, hint } = explain(e);
+    if (!hint && raw !== "ACTION_REJECTED") { const r2 = await simulateReason(sim); if (r2 && r2.hint) { hint = r2.hint; raw = r2.raw; } }
+    hint = hint || GENERIC;
+    pushLog({ action, detail, hash: e?.receipt?.hash || e?.transaction?.hash || null, ok: false, time, err: `${hint} [${raw}]` });
+    toast(`${action} 실패 — ${hint}`, "err");
+    console.error(e);
+    return null;
+  }
+}
+/** 필요한 만큼만 승인 */
+async function ensureAllowance(tokenAddr, spender, needed, label) {
+  const tok = new ethers.Contract(tokenAddr, ERC20_ABI, S.signer);
+  const cur = await tok.allowance(S.account, spender);
+  if (cur >= needed) return true;
+  const dec = await tok.decimals();
+  const rc = await send(`승인(approve) ${label}`, `${fmt(needed, dec, 4)}개만큼 풀이 가져가도록 허락`, () => tok.approve(spender, needed));
+  return !!rc;
+}
+
+/* ---------- 지갑 연결 (EIP-6963 → window.ethereum) ---------- */
+const providers6963 = [];
+window.addEventListener("eip6963:announceProvider", (ev) => providers6963.push(ev.detail));
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+function pickWallet() {
+  const mm = providers6963.find(p => p.info?.rdns === "io.metamask");
+  return (mm || providers6963[0])?.provider || window.ethereum || null;
+}
+async function connect() {
+  S.wallet = pickWallet();
+  if (!S.wallet) { toast("MetaMask가 없습니다. 크롬에 MetaMask를 설치하고 이 페이지를 https 주소로 여세요.", "err"); return; }
+  try {
+    const accts = await S.wallet.request({ method: "eth_requestAccounts" });
+    S.account = ethers.getAddress(accts[0]);
+  } catch (e) { toast(explain(e).hint || GENERIC, "err"); return; }
+  S.wallet.on?.("accountsChanged", () => location.reload());
+  S.wallet.on?.("chainChanged", () => location.reload());
+  S.browser = new ethers.BrowserProvider(S.wallet, "any");
+  S.signer = await S.browser.getSigner();
+  const net = await S.browser.getNetwork();
+  S.chainOk = Number(net.chainId) === CONFIG.CHAIN_ID;
+  if (S.chainOk) S.read = S.browser;
+  renderLog();
+  await refreshAll();
+}
+async function switchChain() {
+  const hex = "0x" + CONFIG.CHAIN_ID.toString(16);
+  try { await S.wallet.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] }); }
+  catch (e) {
+    if (e?.code === 4902 && CONFIG.CHAIN_ID === 11155111) {
+      await S.wallet.request({ method: "wallet_addEthereumChain", params: [{ chainId: hex, chainName: "Sepolia", nativeCurrency: { name: "Sepolia ETH", symbol: "ETH", decimals: 18 }, rpcUrls: [CONFIG.READ_RPC], blockExplorerUrls: [CONFIG.EXPLORER] }] });
+    } else toast(explain(e).hint || GENERIC, "err");
+  }
+}
+
+/* ---------- 읽기 도우미 ---------- */
+const usdC = () => new ethers.Contract(CONFIG.HSUSD, HSUSD_ABI, S.read);
+const dexC = () => new ethers.Contract(CONFIG.DEX, DEX_ABI, S.read);
+const poolC = (a, w = false) => new ethers.Contract(a, POOL_ABI, w ? S.signer : S.read);
+const tokC = (a, w = false) => new ethers.Contract(a, ERC20_ABI, w ? S.signer : S.read);
+
+async function loadPools() {
+  const list = await dexC().listPools();
+  S.pools = [...list];
+  $("poolCount").textContent = S.pools.length + "개";
+  await Promise.all(S.pools.map(async (p) => {
+    if (S.poolMeta[p]) return;
+    const pc = poolC(p);
+    const [token, creator, tDec, uDec] = await Promise.all([pc.token(), pc.creator(), pc.tDec(), pc.uDec()]);
+    let symbol = "?"; try { symbol = await tokC(token).symbol(); } catch {}
+    S.poolMeta[p] = { token, creator, tDec: Number(tDec), uDec: Number(uDec), symbol };
+  }));
+}
+async function poolState(p) {
+  const pc = poolC(p);
+  const m = S.poolMeta[p];
+  const [rT, rU, tot] = await Promise.all([pc.reserveToken(), pc.reserveUsd(), pc.totalShares()]);
+  const price = rT > 0n ? Number(ethers.formatUnits(rU, m.uDec)) / Number(ethers.formatUnits(rT, m.tDec)) : null;
+  return { rT, rU, tot, price };
+}
+
+/* ---------- 화면 갱신 ---------- */
+async function refreshAll() {
+  // 설정 확인
+  const cfgOk = isAddr(CONFIG.HSUSD) && isAddr(CONFIG.DEX) && !/^0x0{40}$/.test(CONFIG.HSUSD) && !/^0x0{40}$/.test(CONFIG.DEX);
+  const cb = $("cfgBanner");
+  if (!cfgOk) { cb.classList.remove("hidden"); cb.innerHTML = "교수자 설정 필요: index.html 맨 아래 CONFIG에 HSUSD·MiniDEX 주소를 넣거나, 주소 뒤에 <code>?hsusd=0x…&dex=0x…</code>를 붙여 여세요."; return; }
+  cb.classList.add("hidden");
+  $("lnkUsd").textContent = short(CONFIG.HSUSD); $("lnkUsd").href = exAddr(CONFIG.HSUSD);
+  $("lnkDex").textContent = short(CONFIG.DEX); $("lnkDex").href = exAddr(CONFIG.DEX);
+  if (!S.read) S.read = new ethers.JsonRpcProvider(CONFIG.READ_RPC, CONFIG.CHAIN_ID, { staticNetwork: true });
+
+  // 헤더·체크리스트
+  const setDot = (id, ok) => $(id).classList.toggle("ok", !!ok);
+  setDot("ck1", !!S.account); setDot("ck2", S.account && S.chainOk);
+  $("btnSwitch").classList.toggle("hidden", !S.account || S.chainOk);
+  if (S.account) {
+    $("btnConnect").classList.add("hidden");
+    $("acctPill").classList.remove("hidden"); $("acctPill").textContent = short(S.account);
+    $("netPill").textContent = S.chainOk ? "Sepolia" : "다른 네트워크"; $("netPill").className = "pill " + (S.chainOk ? "ok" : "bad");
+  }
+  try { await loadPools(); } catch (e) { console.error(e); $("poolCount").textContent = "읽기 실패 (주소·네트워크 확인)"; }
+  if (S.account && S.chainOk) {
+    const [eth, usdBal, claimed] = await Promise.all([S.browser.getBalance(S.account), usdC().balanceOf(S.account), usdC().claimed(S.account)]);
+    $("ethPill").classList.remove("hidden"); $("ethPill").textContent = fmt(eth, 18, 4) + " ETH";
+    $("usdPill").classList.remove("hidden"); $("usdPill").textContent = fmt(usdBal, 18, 2) + " HSUSD";
+    setDot("ck3", eth >= ethers.parseEther("0.01")); $("ck3v").textContent = fmt(eth, 18, 4) + " ETH";
+    setDot("ck4", claimed); $("btnClaim").disabled = claimed; $("btnClaim").textContent = claimed ? "받음 ✓" : "10,000 HSUSD 받기";
+  }
+  await Promise.allSettled([refreshMyToken(), refreshTrade(), refreshLP(), refreshBoard()]);
+}
+
+/* ② 내 토큰 */
+async function refreshMyToken() {
+  const addr = $("myToken").value.trim();
+  const box = $("tokInfo"); const ps = $("poolState");
+  if (!isAddr(addr)) { box.innerHTML = ""; ps.classList.add("hidden"); $("btnCreatePool").classList.add("hidden"); $("btnAdd").disabled = true; $("myPoolInfo").innerHTML = "<dt>풀</dt><dd>—</dd>"; return; }
+  try { localStorage.setItem("minidex-mytoken", addr); } catch {}
+  const t = tokC(addr);
+  const [name, symbol, dec, sup] = await Promise.all([t.name(), t.symbol(), t.decimals(), t.totalSupply()]);
+  const bal = S.account ? await t.balanceOf(S.account) : 0n;
+  S.myTokenMeta = { addr, name, symbol, dec: Number(dec), sup, bal };
+  box.innerHTML = `<dt>이름 / 심볼</dt><dd>${name} / <b>${symbol}</b></dd><dt>소수점 자리(decimals)</dt><dd>${dec}</dd><dt>총공급</dt><dd>${fmt(sup, dec, 0)}</dd><dt>내 보유량</dt><dd>${fmt(bal, dec, 4)}</dd>`;
+  const pool = await dexC().poolOf(addr);
+  const has = pool !== ethers.ZeroAddress;
+  ps.classList.remove("hidden");
+  ps.innerHTML = has ? `풀 주소: <a class="mono" target="_blank" rel="noopener" href="${exAddr(pool)}">${pool}</a>` : "아직 풀이 없습니다. 아래 버튼으로 풀을 만드세요. (가스가 가장 많이 드는 거래입니다)";
+  $("btnCreatePool").classList.toggle("hidden", has || !S.account);
+  S.myPool = has ? pool : null;
+  $("btnAdd").disabled = !(has && S.account && S.chainOk);
+  if (!has) { $("myPoolInfo").innerHTML = "<dt>풀</dt><dd>없음</dd>"; return; }
+  await loadPools();
+  const st = await poolState(pool);
+  const pc = poolC(pool);
+  const [rr] = await Promise.all([pc.riskReport()]);
+  const lockLeft = Number(rr[1]);
+  $("myPoolInfo").innerHTML =
+    `<dt>풀 속 ${symbol}</dt><dd>${fmt(st.rT, dec, 4)}</dd><dt>풀 속 HSUSD</dt><dd>${fmt(st.rU, 18, 4)}</dd>` +
+    `<dt>가격 (HSUSD / ${symbol})</dt><dd class="big">${st.price === null ? "유동성 없음" : num(st.price, 6)}</dd>` +
+    `<dt>① 발행자 LP 지분율</dt><dd>${rr[0]}%</dd><dt>② 발행자 LP 잠금 남은 시간</dt><dd>${lockLeft ? Math.ceil(lockLeft / 60) + "분 (" + lockLeft + "초)" : "0 (잠금 없음)"}</dd>` +
+    `<dt>③ 발행자 풀 밖 물량</dt><dd>${rr[2]}</dd><dt>④ 총공급 대비</dt><dd>${rr[3]}%</dd>`;
+  // 공급 미리보기
+  updateAddPreview(st);
+}
+function updateAddPreview(st) {
+  const t = Number($("addTok").value || 0), u = Number($("addUsd").value || 0);
+  const first = !st || st.tot === 0n;
+  if (first) {
+    $("addSub").textContent = "첫 공급자는 두 수량의 비율로 시작 가격을 정합니다. 교재 예시와 같은 10 : 1 비율을 권장합니다.";
+    $("addUsdHint").textContent = "";
+    $("addPreview").innerHTML = t > 0 && u > 0 ? `시작 가격 = ${u.toLocaleString()} ÷ ${t.toLocaleString()} = <b>${num(u / t, 6)} HSUSD</b> / 토큰` : "수량을 입력하세요.";
+  } else {
+    const need = t * st.price;
+    $("addSub").textContent = "이미 가격이 정해진 풀입니다. 현재 비율에 맞는 HSUSD만큼만 들어갑니다(아래 값은 최대치).";
+    $("addUsdHint").textContent = `(필요 약 ${num(need, 2)})`;
+    $("addPreview").innerHTML = `현재 가격 ${num(st.price, 6)} 기준, 토큰 ${t.toLocaleString()}개에는 HSUSD 약 <b>${num(need, 4)}</b>개가 필요합니다.`;
+  }
+}
+
+/* ③ 거래 */
+async function refreshTrade() {
+  const sel = $("tradePool"); const keep = sel.value || new URLSearchParams(location.search).get("pool") || "";
+  sel.innerHTML = S.pools.length ? "" : '<option value="">— 아직 풀이 없습니다 —</option>';
+  for (const p of S.pools) {
+    const m = S.poolMeta[p]; const mine = S.account && m.creator.toLowerCase() === S.account.toLowerCase();
+    const o = document.createElement("option"); o.value = p; o.textContent = `${m.symbol}  ·  ${short(p)}${mine ? "  (내 풀)" : ""}`; sel.appendChild(o);
+  }
+  if (keep && S.pools.includes(keep)) sel.value = keep;
+  await refreshTradePool();
+}
+async function refreshTradePool() {
+  const p = $("tradePool").value; const box = $("tradeInfo");
+  const can = !!(p && S.account && S.chainOk);
+  ["btnBuy", "btnSell", "btnSellAll"].forEach(id => $(id).disabled = !can);
+  if (!p) { box.innerHTML = ""; return; }
+  const m = S.poolMeta[p]; const st = await poolState(p); S.tradeSt = st;
+  let myTok = 0n; if (S.account) myTok = await tokC(m.token).balanceOf(S.account);
+  S.tradeMyTok = myTok;
+  box.innerHTML = `<dt>토큰</dt><dd><b>${m.symbol}</b> <a class="mono" target="_blank" rel="noopener" href="${exAddr(m.token)}">${short(m.token)}</a></dd>` +
+    `<dt>발행자</dt><dd class="mono">${short(m.creator)}</dd><dt>풀 속 ${m.symbol} / HSUSD</dt><dd>${fmt(st.rT, m.tDec, 4)} / ${fmt(st.rU, m.uDec, 4)}</dd>` +
+    `<dt>현재 가격</dt><dd class="big">${st.price === null ? "유동성 없음" : num(st.price, 6)}</dd><dt>내 ${m.symbol} 보유</dt><dd>${fmt(myTok, m.tDec, 4)}</dd>`;
+  $("sellBal").textContent = `(보유 ${fmt(myTok, m.tDec, 4)})`;
+  await Promise.allSettled([updateBuyPreview(), updateSellPreview()]);
+}
+async function updateBuyPreview() {
+  const p = $("tradePool").value; const a = parseInt($("buyAmt").value || "0", 10);
+  const box = $("buyPrev"), fm = $("buyFormula");
+  if (!p || !(a > 0)) { box.innerHTML = ""; fm.textContent = ""; return; }
+  const m = S.poolMeta[p]; const st = S.tradeSt || await poolState(p);
+  if (st.rT === 0n) { box.innerHTML = '<dt>미리보기</dt><dd class="risk-hi">유동성 없음</dd>'; fm.textContent = ""; return; }
+  try {
+    const r = await poolC(p).previewBuy(a);
+    S.buyPreview = r[0];
+    box.innerHTML = `<dt>받을 ${m.symbol}</dt><dd><b>${r[0]}</b></dd><dt>평균 체결가</dt><dd>${r[1]}</dd><dt>거래 후 가격</dt><dd>${r[2]}</dd><dt>가격 변화</dt><dd>${r[3]}%</dd>`;
+  } catch (e) { box.innerHTML = `<dt>미리보기</dt><dd class="risk-hi">${explain(e).hint || "미리보기 실패"}</dd>`; }
+  const Rt = Number(ethers.formatUnits(st.rT, m.tDec)), Ru = Number(ethers.formatUnits(st.rU, m.uDec)), inF = a * 0.997;
+  const out = Rt * inF / (Ru + inF);
+  fm.textContent = `손계산 (x·y = k, 수수료 0.3%)\nΔ = 넣는 HSUSD × 0.997 = ${num(inF, 1)}\n받는 토큰 = 풀 토큰 × Δ ÷ (풀 HSUSD + Δ)\n= ${num(Rt, 2)} × ${num(inF, 1)} ÷ (${num(Ru, 2)} + ${num(inF, 1)})\n≈ ${num(out, 4)}`;
+}
+async function updateSellPreview() {
+  const p = $("tradePool").value; const a = parseInt($("sellAmt").value || "0", 10); const box = $("sellPrev");
+  if (!p || !(a > 0)) { box.innerHTML = ""; return; }
+  const m = S.poolMeta[p];
+  try { const r = await poolC(p).previewSell(a); box.innerHTML = `<dt>받을 HSUSD</dt><dd><b>${r[0]}</b></dd><dt>평균 체결가</dt><dd>${r[1]}</dd><dt>거래 후 가격</dt><dd>${r[2]}</dd><dt>가격 변화</dt><dd>${r[3]}%</dd>`; }
+  catch (e) { box.innerHTML = `<dt>미리보기</dt><dd class="risk-hi">${explain(e).hint || "미리보기 실패"}</dd>`; }
+}
+
+/* ④ 내 유동성 */
+async function refreshLP() {
+  const sel = $("lpPool"); const keep = sel.value;
+  if (!S.account) { sel.innerHTML = '<option value="">— 지갑을 연결하세요 —</option>'; return; }
+  const mine = [];
+  await Promise.all(S.pools.map(async p => { const s = await poolC(p).shares(S.account); if (s > 0n) mine.push(p); }));
+  sel.innerHTML = mine.length ? "" : '<option value="">— LP 지분이 있는 풀이 없습니다 —</option>';
+  mine.forEach(p => { const o = document.createElement("option"); o.value = p; o.textContent = `${S.poolMeta[p].symbol} · ${short(p)}`; sel.appendChild(o); });
+  if (keep && mine.includes(keep)) sel.value = keep;
+  await refreshLPPool();
+}
+async function refreshLPPool() {
+  const p = $("lpPool").value; const box = $("lpInfo");
+  $("btnRemove").disabled = $("btnLock").disabled = !(p && S.chainOk);
+  if (!p) { box.innerHTML = ""; return; }
+  const m = S.poolMeta[p]; const pc = poolC(p); const st = await poolState(p);
+  const [sh, until] = await Promise.all([pc.shares(S.account), pc.lockedUntil(S.account)]);
+  const pct = st.tot > 0n ? Number(sh * 1000000n / st.tot) / 10000 : 0;
+  const now = Math.floor(Date.now() / 1000); const left = Math.max(0, Number(until) - now);
+  box.innerHTML = `<dt>내 지분율</dt><dd class="big">${num(pct, 2)}%</dd>` +
+    `<dt>내 몫 (${m.symbol})</dt><dd>${num(Number(ethers.formatUnits(st.rT, m.tDec)) * pct / 100, 4)}</dd><dt>내 몫 (HSUSD)</dt><dd>${num(Number(ethers.formatUnits(st.rU, m.uDec)) * pct / 100, 4)}</dd>` +
+    `<dt>잠금</dt><dd>${left ? `<span class="risk-lo">${Math.ceil(left / 60)}분 남음</span> (${new Date(Number(until) * 1000).toLocaleTimeString("ko-KR")}까지)` : "없음"}</dd>`;
+}
+
+/* ⑤ 반 전체 풀 */
+async function refreshBoard() {
+  const body = $("boardBody");
+  if (!S.pools.length) { body.innerHTML = '<tr><td colspan="8" class="muted">아직 풀이 없습니다.</td></tr>'; return; }
+  const rows = await Promise.all(S.pools.map(async (p, i) => {
+    const m = S.poolMeta[p];
+    try {
+      const [st, rr] = await Promise.all([poolState(p), poolC(p).riskReport()]);
+      const lp = parseFloat(rr[0]), lock = Number(rr[1]), out = parseFloat(rr[3]);
+      let risk = ["하", "risk-lo"];
+      if (st.rT === 0n) risk = ["유동성 없음", "risk-hi"];
+      else if (lp >= 70 && lock === 0) risk = ["상", "risk-hi"];
+      else if (out >= 50) risk = ["중", "risk-mid"];
+      const mine = S.account && m.creator.toLowerCase() === S.account.toLowerCase();
+      return `<tr><td>${i + 1}</td><td><a target="_blank" rel="noopener" href="${exAddr(m.token)}"><b>${m.symbol}</b></a>${mine ? ' <span class="tag">내 풀</span>' : ""}</td>` +
+        `<td>${st.price === null ? "—" : num(st.price, 6)}</td><td>${fmt(st.rU, m.uDec, 2)}</td><td>${rr[0]}%</td><td>${lock ? Math.ceil(lock / 60) + "분" : "없음"}</td><td>${rr[3]}%</td><td class="${risk[1]}">${risk[0]}</td></tr>`;
+    } catch (e) { return `<tr><td>${i + 1}</td><td>${m.symbol}</td><td colspan="6" class="muted">읽기 실패</td></tr>`; }
+  }));
+  body.innerHTML = rows.join("");
+}
+
+/* ---------- 버튼 동작 ---------- */
+$("btnConnect").onclick = connect;
+$("btnSwitch").onclick = switchChain;
+$("btnClaim").onclick = () => send("HSUSD 받기 (claim)", "수업용 기준통화 10,000 HSUSD 수령", () => new ethers.Contract(CONFIG.HSUSD, HSUSD_ABI, S.signer).claim(), { to: CONFIG.HSUSD, abi: HSUSD_ABI, method: "claim", args: [] });
+$("btnLoadToken").onclick = () => refreshMyToken().catch(e => toast("토큰을 읽지 못했습니다. 주소와 네트워크를 확인하세요.", "err"));
+$("btnCreatePool").onclick = async () => {
+  const a = $("myToken").value.trim();
+  await send("풀 만들기 (createPool)", `${S.myTokenMeta?.symbol || ""} / HSUSD 풀 생성`, () => new ethers.Contract(CONFIG.DEX, DEX_ABI, S.signer).createPool(a), { to: CONFIG.DEX, abi: DEX_ABI, method: "createPool", args: [a] });
+};
+["addTok", "addUsd"].forEach(id => $(id).addEventListener("input", async () => { if (S.myPool) updateAddPreview(await poolState(S.myPool)); else updateAddPreview(null); }));
+$("btnAdd").onclick = async () => {
+  const t = parseInt($("addTok").value, 10), u = parseInt($("addUsd").value, 10);
+  if (!(t > 0 && u > 0)) return toast("정수 수량을 입력하세요.", "err");
+  const p = S.myPool, m = S.myTokenMeta;
+  if (!(await ensureAllowance(m.addr, p, BigInt(t) * 10n ** BigInt(m.dec), m.symbol))) return;
+  if (!(await ensureAllowance(CONFIG.HSUSD, p, BigInt(u) * 10n ** 18n, "HSUSD"))) return;
+  await send("유동성 공급 (addLiquidity)", `${m.symbol} ${t.toLocaleString()}개 + HSUSD 최대 ${u.toLocaleString()}개`, () => poolC(p, true).addLiquidity(t, u), { to: p, abi: POOL_ABI, method: "addLiquidity", args: [t, u] });
+};
+$("tradePool").onchange = () => refreshTradePool();
+$("btnRefreshTrade").onclick = () => refreshTrade();
+let deb; const debounce = (f) => { clearTimeout(deb); deb = setTimeout(f, 250); };
+$("buyAmt").addEventListener("input", () => debounce(updateBuyPreview));
+$("sellAmt").addEventListener("input", () => debounce(updateSellPreview));
+$("btnBuy").onclick = async () => {
+  const p = $("tradePool").value, a = parseInt($("buyAmt").value, 10), m = S.poolMeta[p];
+  if (!(a > 0)) return toast("정수 수량을 입력하세요.", "err");
+  const slip = parseFloat($("buySlip").value);
+  let minW = 0; if (slip >= 0 && S.buyPreview) minW = Math.floor(parseFloat(S.buyPreview.replace(/,/g, "")) * (1 - slip));
+  if (!(await ensureAllowance(CONFIG.HSUSD, p, BigInt(a) * 10n ** BigInt(m.uDec), "HSUSD"))) return;
+  await send(`사기 (buy) ${m.symbol}`, `HSUSD ${a.toLocaleString()}개로 매수, 최소 수령 ${minW.toLocaleString()}개`, () => poolC(p, true).buy(a, minW), { to: p, abi: POOL_ABI, method: "buy", args: [a, minW] });
+};
+$("btnSell").onclick = async () => {
+  const p = $("tradePool").value, a = parseInt($("sellAmt").value, 10), m = S.poolMeta[p];
+  if (!(a > 0)) return toast("정수 수량을 입력하세요.", "err");
+  if (!(await ensureAllowance(m.token, p, BigInt(a) * 10n ** BigInt(m.tDec), m.symbol))) return;
+  await send(`팔기 (sell) ${m.symbol}`, `${m.symbol} ${a.toLocaleString()}개 매도`, () => poolC(p, true).sell(a, 0), { to: p, abi: POOL_ABI, method: "sell", args: [a, 0] });
+};
+$("btnSellAll").onclick = async () => {
+  const p = $("tradePool").value, m = S.poolMeta[p];
+  const bal = await tokC(m.token).balanceOf(S.account);
+  if (bal === 0n) return toast("팔 토큰이 없습니다.", "err");
+  if (!(await ensureAllowance(m.token, p, bal, m.symbol))) return;
+  await send(`전부 팔기 (sellAll) ${m.symbol}`, `${m.symbol} ${fmt(bal, m.tDec, 4)}개 전부 매도`, () => poolC(p, true).sellAll(0), { to: p, abi: POOL_ABI, method: "sellAll", args: [0] });
+};
+$("lpPool").onchange = () => refreshLPPool();
+$("remPct").oninput = () => ($("remPctV").textContent = $("remPct").value);
+$("btnRemove").onclick = async () => {
+  const p = $("lpPool").value, pct = parseInt($("remPct").value, 10), m = S.poolMeta[p];
+  await send(`유동성 회수 (removeLiquidity) ${m.symbol}`, `내 LP 지분의 ${pct}% 회수`, () => poolC(p, true).removeLiquidity(pct), { to: p, abi: POOL_ABI, method: "removeLiquidity", args: [pct] });
+};
+$("btnLock").onclick = async () => {
+  const p = $("lpPool").value, mins = parseInt($("lockMin").value, 10), m = S.poolMeta[p];
+  if (!(mins > 0)) return toast("분 단위 정수를 입력하세요.", "err");
+  await send(`유동성 잠금 (lockLiquidity) ${m.symbol}`, `지금부터 ${mins}분 잠금`, () => poolC(p, true).lockLiquidity(mins), { to: p, abi: POOL_ABI, method: "lockLiquidity", args: [mins] });
+};
+$("btnBoard").onclick = () => loadPools().then(refreshBoard);
+$("btnCopyLog").onclick = async () => {
+  const txt = readLog().slice().reverse().map(x => `${x.time}\t${x.action}\t${x.ok ? "성공" : "실패"}\t${x.detail || ""}\t${x.hash || ""}\t${x.err || ""}`).join("\n");
+  try { await navigator.clipboard.writeText(`계정 ${S.account}\n${txt}`); toast("복사했습니다. 실습지에 붙여넣으세요.", "ok"); } catch { toast("복사하지 못했습니다. 직접 선택해 복사하세요.", "err"); }
+};
+
+/* 탭 */
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll("section[data-panel]").forEach(s => s.classList.toggle("hidden", s.dataset.panel !== b.dataset.tab));
+  try { localStorage.setItem("minidex-tab", b.dataset.tab); } catch {}
+  b.scrollIntoView({ block: "nearest", inline: "nearest" });
+});
+
+/* 시작 */
+(async () => {
+  try { const t = localStorage.getItem("minidex-mytoken"); if (t) $("myToken").value = t; const tab = localStorage.getItem("minidex-tab"); if (tab) document.querySelector(`#tabs button[data-tab="${tab}"]`)?.click(); } catch {}
+  renderLog();
+  await refreshAll().catch(console.error);
+  // 이미 연결 승인된 지갑이면 자동 연결
+  setTimeout(async () => { const w = pickWallet(); if (w) { try { const a = await w.request({ method: "eth_accounts" }); if (a && a.length) connect(); } catch {} } }, 300);
+  setInterval(() => { if (!document.hidden && S.account) refreshLPPool().catch(() => {}); }, 15000);
+})();
+</script>
+</body>
+</html>
